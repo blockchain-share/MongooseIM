@@ -19,6 +19,7 @@
          retrieve_pubsub/1,
          retrieve_private_xml/1,
          retrieve_inbox/1,
+         retrieve_inbox_for_multipe_messages/1,
          retrieve_logs/1
         ]).
 -export([
@@ -53,7 +54,8 @@ groups() ->
                                    %retrieve_offline,
                                    %retrieve_pubsub,
                                    %retrieve_private_xml,
-                                   %retrieve_inbox,
+                                   retrieve_inbox,
+                                   retrieve_inbox_for_multipe_messages,
                                    retrieve_logs
                                   ]},
     {data_is_not_retrieved_for_missing_user, [],
@@ -113,7 +115,15 @@ end_per_testcase(CN, Config) ->
     escalus:end_per_testcase(CN, Config).
 
 inbox_required_modules() ->
-    [{mod_inbox, []}].
+    [
+     {mod_inbox, inbox_opts()}
+    ].
+
+inbox_opts() ->
+    [{aff_changes, true},
+     {remove_on_kicked, true},
+     {groupchat, [muclight]},
+     {markers, [displayed]}].
 
 pick_backend_for_mam() ->
     BackendsList = [
@@ -239,18 +249,50 @@ retrieve_private_xml(Config) ->
 
 retrieve_inbox(Config) ->
     escalus:fresh_story(Config, [{alice, 1}, {bob, 1}], fun(Alice, Bob) ->
+            BobU = escalus_utils:jid_to_lower(escalus_client:username(Bob)),
+            BobS = escalus_utils:jid_to_lower(escalus_client:server(Bob)),
+            AliceU = escalus_utils:jid_to_lower(escalus_client:username(Alice)),
+            AliceS = escalus_utils:jid_to_lower(escalus_client:server(Alice)),
             Body = <<"With spam?">>,
-            escalus:send(Bob, escalus_stanza:chat_to(Alice, Body)),
-            Msg = escalus:wait_for_stanza(Alice),
-            escalus:assert(is_chat_message, [Body], Msg),
-
-            BobJid = escalus_client:short_jid(Bob),
-            ExpectedHeader = ["jid", "content", "unread_count", "msg_id", "timestamp"],
-            ExpectedItems = [
-                             #{ "content" => Body, "jid" => BobJid }
+            send_and_assert_is_chat_message(Bob, Alice, Body),
+            ExpectedHeader = ["jid", "content", "unread_count", "timestamp"],
+            ExpectedAliceItems = [
+                             #{ "content" => [{contains, Body}],
+                                "jid" => [{contains, BobS},
+                                          {contains, BobU}],
+                                "unread_count" => "1" }
+                            ],
+            ExpectedBobItems = [
+                             #{ "content" => [{contains, Body}],
+                                "jid" => [{contains, AliceS},
+                                          {contains, AliceU}],
+                                "unread_count" => "0" }
                             ],
             retrieve_and_validate_personal_data(
-              Alice, Config, "inbox", ExpectedHeader, ExpectedItems)
+              Alice, Config, "inbox", ExpectedHeader, ExpectedAliceItems),
+            retrieve_and_validate_personal_data(
+              Bob, Config, "inbox", ExpectedHeader, ExpectedBobItems)
+        end).
+
+retrieve_inbox_for_multiple_messages(Config) ->
+    escalus:fresh_story(Config, [{alice, 1}, {bob, 1}], fun(Alice, Bob) ->
+            Bodies = [ <<"Nobody exists on purpose.">>,
+                       <<"Nobody belongs anywhere.">>,
+                       <<"We're all going to die.">>,
+                       <<"Come watch TV.">>],
+            lists:foreach(fun(Body) -> send_and_assert_is_chat_message(Bob, Alice, Body) end, Bodies),
+            BobU = escalus_utils:jid_to_lower(escalus_client:username(Bob)),
+            BobS = escalus_utils:jid_to_lower(escalus_client:server(Bob)),
+
+            ExpectedHeader = ["jid", "content", "unread_count", "timestamp"],
+            ExpectedAliceItems = [
+                             #{ "content" => [{contains, lists:last(Bodies)}],
+                                "jid" => [{contains, BobS},
+                                          {contains, BobU}],
+                                "unread_count" => integer_to_list(length(Bodies)) }
+                            ],
+            retrieve_and_validate_personal_data(
+              Alice, Config, "inbox", ExpectedHeader, ExpectedAliceItems)
         end).
 
 retrieve_logs(Config) ->
@@ -366,3 +408,8 @@ is_file_to_be_deleted(Filename) ->
             re:run(Filename, Regex) =/= nomatch
         end,
     DeletableRegexes).
+
+send_and_assert_is_chat_message(UserFrom, UserTo, Body) ->
+    escalus:send(UserFrom, escalus_stanza:chat_to(UserTo, Body)),
+    Msg = escalus:wait_for_stanza(UserTo),
+    escalus:assert(is_chat_message, [Body], Msg).
