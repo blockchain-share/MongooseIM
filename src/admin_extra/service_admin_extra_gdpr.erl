@@ -57,6 +57,7 @@ retrieve_all(Username, Domain, ResultFilePath) ->
 -spec modules_with_personal_data() -> [module()].
 modules_with_personal_data() ->
     [
+     mod_roster,
      mod_vcard
     ].
 
