@@ -52,7 +52,7 @@ groups() ->
                                    %retrieve_mam,
                                    %retrieve_offline,
                                    %retrieve_pubsub,
-                                   %retrieve_private_xml,
+                                   retrieve_private_xml,
                                    %retrieve_inbox,
                                    retrieve_logs
                                   ]},
