@@ -19,7 +19,7 @@
          retrieve_pubsub/1,
          retrieve_private_xml/1,
          retrieve_inbox/1,
-         retrieve_inbox_for_multipe_messages/1,
+         retrieve_inbox_for_multiple_messages/1,
          retrieve_logs/1
         ]).
 -export([
@@ -55,7 +55,7 @@ groups() ->
                                    %retrieve_pubsub,
                                    %retrieve_private_xml,
                                    retrieve_inbox,
-                                   retrieve_inbox_for_multipe_messages,
+                                   retrieve_inbox_for_multiple_messages,
                                    retrieve_logs
                                   ]},
     {data_is_not_retrieved_for_missing_user, [],
