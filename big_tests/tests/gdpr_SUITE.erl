@@ -256,8 +256,8 @@ retrieve_inbox(Config) ->
 retrieve_logs(Config) ->
     escalus:fresh_story(Config, [{alice, 1}],
         fun(Alice) ->
-            User = string:lowercase(escalus_client:username(Alice)),
-            Domain = string:lowercase(escalus_client:server(Alice)),
+            User = escalus_utils:jid_to_lower(escalus_client:username(Alice)),
+            Domain = escalus_utils:jid_to_lower(escalus_client:server(Alice)),
             JID = string:uppercase(escalus_client:short_jid(Alice)),
             MIM2Node = distributed_helper:mim2(),
             mongoose_helper:successful_rpc(net_kernel, connect_node, [MIM2Node]),
