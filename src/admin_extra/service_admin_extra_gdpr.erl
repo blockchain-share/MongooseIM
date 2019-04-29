@@ -58,7 +58,8 @@ retrieve_all(Username, Domain, ResultFilePath) ->
 modules_with_personal_data() ->
     [
      mod_vcard,
-     mod_offline_mnesia
+     mod_offline_mnesia,
+     mod_offline_rdbms
     ].
 
 -spec get_data_from_modules(jid:user(), jid:server()) ->
